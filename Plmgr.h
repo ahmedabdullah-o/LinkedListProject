@@ -18,92 +18,47 @@ namespace fs = std::filesystem;
 class Plmgr {
     private:
         //playlists[playlist index][audio file index].
-        //NOTE: playlist[n].second.query(0) is playlist name.
-        //TODO: replace the inner vector with DLL
-        vector<pair<string, vector<string>>> playlists;
+        //NOTE: playlist[index].second[data] is playlist name.
+        vector<pair<string, DLL<string>>> playlists;
 
         int util_get_index(string name){
             for (int i = 0; i < playlists.size(); i++){
-                if (playlists[i].second[0] == name)
+                if (playlists[i].first == name)
                     return i;
             }
             return -1;
         }
 
-        void util_populate_playlist(int index){
-            ifstream file(playlists[index].first);
+        void util_populate_playlist(string name){
+            ifstream file("./playlists/"+name+".apl");
             if (!file.is_open()){
                 throw runtime_error("File exists but can't open file");
             } else {
                 string line = "";
-                //Importing audio paths into playlists[n][1, n]
+                //Importing audio paths into playlists[n][m]
                 while(getline(file, line)){
                     if (line[0] != '#' && line.length() > 0){
-                        if (fs::exists(line) && fs::is_regular_file(line)){
-                            playlists[index].second.push_back(line);
+                        if (fs::exists(line))
+                            if (fs::is_regular_file(line)){
+                            playlists[playlists.size() - 1].second.push_back(line);
                         }
                     }
                 }
             }
+            file.close();
         }
 
-        void util_add_to_playlists (string path, string name){
-            for (int i = 0; i < playlists.size(); i++){
-                if (name == playlists[i].second[0]){
-                    while (true){
-                        string choice = 0;
-                        cerr<<"A playlist with the same name already exists.\n"
-                            <<"[1] Change name\n[2] Skip playlist\n"
-                            <<"Choice: "; cin>>choice;
-                        if (choice == "1"){
-                            string alter_name = "";
-                            cout<<"Enter name: "; cin>>alter_name;
-                            name = alter_name;
-                            if (name != playlists[i].second[0]){
-                                playlists.push_back(
-                                    {path, vector<string>(0)}
-                                );
-                                playlists[playlists.size() - 1].second.push_back(name);
-                                util_populate_playlist(util_get_index(name));
-                                break;
-                            }
-                        } else if (choice == "2"){
-                            break;
-                        } else {
-                            cerr<<"Wrong choice\n";
-                        }
-                    }
-                }
-            }
-            playlists.push_back(
-                {path, vector<string>(0)}
-            );
-            playlists[playlists.size() - 1].second.push_back(name);
-            util_populate_playlist(util_get_index(name));
-        }
-        //TODO: make (util_load_apl) work with various paths
         void util_load_apl(){
             //iterate over files in playlists folder
             for (const auto& entry : fs::directory_iterator("./playlists")) {
                 //check file extension
                 if (fs::is_regular_file(entry)){
                     if (entry.path().extension().string() == ".apl"){
-                        //add playlist to the vector
-                        util_add_to_playlists(entry.path().string(), entry.path().stem().string());
-                    } else {
-                        while(true){
-                            string choice = "";
-                            cerr<<"Found non-playlist file:\n"<<entry<<'\n'
-                                <<"Do you want to include as playlist(faulty)? {y, n}:"; cin>>choice;
-                            if (choice == "y"){
-                                util_add_to_playlists(entry.path().string(), entry.path().stem().string());
-                                break;
-                            } else if (choice == "n"){
-                                break;
-                            } else {
-                                cerr<<"Wrong choice\n";
-                            }
-                        }
+                        //add playlist to the DLL
+                        playlists.push_back(
+                            {entry.path().stem().string(), DLL<string>()}
+                        );
+                        util_populate_playlist(entry.path().stem().string());
                     }
                 }
             }
@@ -157,7 +112,10 @@ class Plmgr {
                 if (skip) break;
                 else {
                     ofstream file("./playlists/"+name+".apl");
-                    util_add_to_playlists("./playlists/"+name+".apl", name);
+                    playlists.push_back(
+                        {name, DLL<string>()}
+                    );
+                    util_populate_playlist(name);
                     break;
                 }
             }
@@ -230,7 +188,7 @@ class Plmgr {
                         cout<<"Found and deleted path successfully.\n";
                         //Reloading playlist
                         playlists[util_get_index(playlist_name)].second.clear();
-                        util_populate_playlist(util_get_index(playlist_name));
+                        util_populate_playlist(playlist_name);
                     } else {
                         cerr<<"Path doesn't exist in first place.\n";
                     }
@@ -249,16 +207,14 @@ class Plmgr {
         //[5]
         void print_all_pl(){
             for (int i = 0; i < playlists.size(); i++){
-                cout<<'['<<i<<"]: "<<playlists[i].second[0]<<'\n';
+                cout<<'['<<i<<"]: "<<playlists[i].first<<'\n';
             }
         }
         //[6]
         void print_all_audio(){
             for (int i = 0; i < playlists.size(); i++){
-                cout<<"PLAYLIST: "<<playlists[i].second[0]<<'\n';
-                for (int j = 1; j < playlists[i].second.size(); j++){
-                    cout<<'['<<j - 1<<"]: "<<playlists[i].second[j]<<'\n';
-                }
+                cout<<"PLAYLIST: "<<playlists[i].first<<'\n';
+                playlists[i].second.traverse();
             }
         }
         //[7]
@@ -267,9 +223,7 @@ class Plmgr {
             cout<<"Enter playlist name:";cin>>playlist_name;
             int index = util_get_index(playlist_name);
             if (index >= 0){
-                for (int i = 1; i < playlists[index].second.size(); i++){
-                    cout<<'['<<i<<"]: "<<playlists[index].second[i]<<'\n';
-                }
+                playlists[index].second.traverse();
             }
         }
         //[8]

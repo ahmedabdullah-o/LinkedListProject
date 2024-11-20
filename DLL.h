@@ -36,7 +36,7 @@ class DLL {
         }
         T pop_back(){
             if (!head){
-                throw out_of_range("The list is empty");
+                throw std::out_of_range("The list is empty");
             } else if (size == 1){
                 T out = tail->data;
                 clear();
@@ -63,7 +63,7 @@ class DLL {
         }
         T pop_front(){
             if (!head){
-                throw out_of_range("The list is empty");
+                throw std::out_of_range("The list is empty");
             } else if (size == 1){
                 T out = head->data;
                 clear();
@@ -79,7 +79,7 @@ class DLL {
         }
         void insert(T data, size_t index){
             if (index >= size){
-                throw out_of_range("The index is out of bound");
+                throw std::out_of_range("Index out of bound");
             } else {
                 Node<T>* current = head;
                 int count = 0;
@@ -105,7 +105,7 @@ class DLL {
         }
         void erase(size_t index){
             if (index >= size){
-                throw out_of_range("The index is out of bound");
+                throw std::out_of_range("Index out of bound");
             } else {
                 Node<T>* current = head;
                 int count = 0;
